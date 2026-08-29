@@ -1,0 +1,4 @@
+_build/
+deps/
+*.log
+godot_win_build
