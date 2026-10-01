@@ -130,6 +130,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           tag="${{ inputs.release_tag || github.ref_name }}"
-          gh release create "$tag" --repo "$GITHUB_REPOSITORY" --title "$tag" \
+          gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "$tag" \
             --notes "godot-sandbox ${ADDON_REF} at precision=double: windows x86_64 (llvm-mingw ${LLVM_MINGW}), linux x86_64, macos universal; template_release. Flags: ${SCONS_FLAGS}" \
             release/* || gh release upload "$tag" --repo "$GITHUB_REPOSITORY" --clobber release/*
