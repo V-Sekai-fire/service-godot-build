@@ -7,8 +7,8 @@ on:
   workflow_dispatch:
     inputs:
       addon_ref:
-        description: godot-sandbox commit (feat/bintr-emit)
-        default: feat/bintr-emit
+        description: godot-sandbox commit (b1118e5 merged with bintr-emit)
+        default: ade650e9e902a340e8f8803c570ed11a9ba9d643
         required: true
       release_tag:
         description: publish a release under this tag (empty for artifacts only)
@@ -18,7 +18,7 @@ on:
 
 env:
   ADDON_REPO: V-Sekai-fire/godot-sandbox
-  ADDON_REF: ${{ inputs.addon_ref || 'feat/bintr-emit' }}
+  ADDON_REF: ${{ inputs.addon_ref || 'ade650e9e902a340e8f8803c570ed11a9ba9d643' }}
   LLVM_MINGW: "20260922"
   SCONS_FLAGS: >-
     precision=double

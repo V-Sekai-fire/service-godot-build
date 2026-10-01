@@ -13,7 +13,7 @@ on:
     inputs:
       engine_ref:
         description: entities-godot commit to build
-        default: 97dab7a638b5d2a0e1b9b57e0fdc1c2cb4b6b8e2
+        default: 97dab7a638ae8b613dcf6e657f93f020471d9040
         required: true
       release_tag:
         description: publish a release under this tag (empty for artifacts only)
@@ -23,7 +23,7 @@ on:
 
 env:
   ENGINE_REPO: V-Sekai-fire/entities-godot
-  ENGINE_REF: ${{ inputs.engine_ref || '97dab7a638b5d2a0e1b9b57e0fdc1c2cb4b6b8e2' }}
+  ENGINE_REF: ${{ inputs.engine_ref || '97dab7a638ae8b613dcf6e657f93f020471d9040' }}
   LLVM_MINGW: "20260922"
   # The flags every job shares. No dev_mode: these are the binaries the rung
   # runs, not a lint of the engine.
