@@ -1,0 +1,128 @@
+# The godot-sandbox addon at precision=double with BINTR_EMIT, for the rung's
+# three hosts (RFD 2293 step 1). Each library is the one the pen's
+# .gdextension already maps. A tag v<date>-addon.N publishes them as a release.
+name: addon
+
+on:
+  workflow_dispatch:
+    inputs:
+      addon_ref:
+        description: godot-sandbox commit (feat/bintr-emit)
+        default: feat/bintr-emit
+        required: true
+      release_tag:
+        description: publish a release under this tag (empty for artifacts only)
+        default: ""
+  push:
+    tags: ["v*-addon.*"]
+
+env:
+  ADDON_REPO: V-Sekai-fire/godot-sandbox
+  ADDON_REF: ${{ inputs.addon_ref || 'feat/bintr-emit' }}
+  LLVM_MINGW: "20260922"
+  SCONS_FLAGS: >-
+    precision=double
+    target=template_release
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ env.ADDON_REPO }}
+          ref: ${{ env.ADDON_REF }}
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install scons
+      - name: llvm-mingw
+        shell: sh
+        run: |
+          ver=$LLVM_MINGW
+          curl -fsSL -o llvm-mingw.zip "https://github.com/mstorsjo/llvm-mingw/releases/download/$ver/llvm-mingw-$ver-ucrt-x86_64.zip"
+          7z x -y llvm-mingw.zip > /dev/null
+          echo "$PWD/llvm-mingw-$ver-ucrt-x86_64/bin" >> "$GITHUB_PATH"
+      - name: Compile
+        run: scons ${{ env.SCONS_FLAGS }} platform=windows arch=x86_64 use_mingw=yes use_llvm=yes
+      - name: Check the library
+        shell: sh
+        run: ls -l bin/addons/godot_sandbox/bin/libgodot_riscv.windows.template_release.double.x86_64.dll
+      - uses: actions/upload-artifact@v4
+        with:
+          name: addon-windows-double
+          path: bin/addons/godot_sandbox/bin/*double*
+          if-no-files-found: error
+
+  linux:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ env.ADDON_REPO }}
+          ref: ${{ env.ADDON_REF }}
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install scons
+      - name: Compile
+        run: scons ${{ env.SCONS_FLAGS }} platform=linux arch=x86_64
+      - name: Check the library
+        run: ls -l bin/addons/godot_sandbox/bin/libgodot_riscv.linux.template_release.double.x86_64.so
+      - uses: actions/upload-artifact@v4
+        with:
+          name: addon-linux-double
+          path: bin/addons/godot_sandbox/bin/*double*
+          if-no-files-found: error
+
+  macos:
+    runs-on: macos-26
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ env.ADDON_REPO }}
+          ref: ${{ env.ADDON_REF }}
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install scons
+      - name: Compile
+        run: scons ${{ env.SCONS_FLAGS }} platform=macos arch=arm64
+      - name: Check the library
+        run: ls -l bin/addons/godot_sandbox/bin/libgodot_riscv.macos.template_release.double.arm64.framework/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: addon-macos-double
+          path: bin/addons/godot_sandbox/bin/*double*
+          if-no-files-found: error
+
+  release:
+    needs: [windows, linux, macos]
+    if: ${{ inputs.release_tag != '' || startsWith(github.ref, 'refs/tags/') }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+      - name: Flatten and hash
+        run: |
+          mkdir -p release
+          find out -type f -exec cp -t release/ {} +
+          cd release && sha256sum * | tee SHA256SUMS
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${{ inputs.release_tag || github.ref_name }}"
+          gh release create "$tag" --repo "$GITHUB_REPOSITORY" --title "$tag" \
+            --notes "godot-sandbox ${ADDON_REF} at precision=double: windows x86_64 (llvm-mingw ${LLVM_MINGW}), linux x86_64, macos arm64; template_release. Flags: ${SCONS_FLAGS}" \
+            release/* || gh release upload "$tag" --repo "$GITHUB_REPOSITORY" --clobber release/*
