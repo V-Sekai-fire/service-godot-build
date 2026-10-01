@@ -228,6 +228,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           tag="${{ inputs.release_tag || github.ref_name }}"
-          gh release create "$tag" --repo "$GITHUB_REPOSITORY" --title "$tag" \
+          gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "$tag" \
             --notes "entities-godot ${ENGINE_REF} at precision=double: windows x86_64 (llvm-mingw ${LLVM_MINGW}), linux x86_64, macos arm64; editor and template_release. Flags: ${SCONS_FLAGS}" \
             release/* || gh release upload "$tag" --repo "$GITHUB_REPOSITORY" --clobber release/*
