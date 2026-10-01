@@ -1,6 +1,6 @@
-# The godot-sandbox addon at precision=double with BINTR_EMIT, for the rung's
-# three hosts (RFD 2293 step 1). Each library is the one the pen's
-# .gdextension already maps. A tag v<date>-addon.N publishes them as a release.
+# The godot-sandbox addon at both precisions with BINTR_EMIT, for the rung's three hosts
+# (RFD 2293 step 1), and the SafeGDScript compiler built for each. Each library is the one
+# the addon's .gdextension maps. A tag v<date>-addon.N publishes them as a release.
 name: addon
 
 on:
@@ -20,9 +20,7 @@ env:
   ADDON_REPO: V-Sekai-fire/godot-sandbox
   ADDON_REF: ${{ inputs.addon_ref || 'ade650e9e902a340e8f8803c570ed11a9ba9d643' }}
   LLVM_MINGW: "20260922"
-  SCONS_FLAGS: >-
-    precision=double
-    target=template_release
+  SCONS_FLAGS: target=template_release
 
 permissions:
   contents: write
@@ -31,6 +29,13 @@ jobs:
   windows:
     runs-on: windows-latest
     timeout-minutes: 120
+    strategy:
+      matrix:
+        include:
+          - precision: single
+            suffix: ""
+          - precision: double
+            suffix: .double
     steps:
       - uses: actions/checkout@v4
         with:
@@ -49,19 +54,26 @@ jobs:
           7z x -y llvm-mingw.zip > /dev/null
           echo "$PWD/llvm-mingw-$ver-ucrt-x86_64/bin" >> "$GITHUB_PATH"
       - name: Compile
-        run: scons ${{ env.SCONS_FLAGS }} platform=windows arch=x86_64 use_mingw=yes use_llvm=yes
+        run: scons ${{ env.SCONS_FLAGS }} precision=${{ matrix.precision }} platform=windows arch=x86_64 use_mingw=yes use_llvm=yes
       - name: Stage the library
         shell: sh
-        run: mkdir -p stage && cp bin/addons/godot_sandbox/bin/libgodot_riscv.windows.template_release.double.x86_64.dll stage/ && ls -l stage
+        run: mkdir -p stage && cp bin/addons/godot_sandbox/bin/libgodot_riscv.windows.template_release${{ matrix.suffix }}.x86_64.dll stage/ && ls -l stage
       - uses: actions/upload-artifact@v4
         with:
-          name: addon-windows-double
+          name: addon-windows-${{ matrix.precision }}
           path: stage/*
           if-no-files-found: error
 
   linux:
     runs-on: ubuntu-22.04
     timeout-minutes: 120
+    strategy:
+      matrix:
+        include:
+          - precision: single
+            suffix: ""
+          - precision: double
+            suffix: .double
     steps:
       - uses: actions/checkout@v4
         with:
@@ -73,18 +85,25 @@ jobs:
           python-version: "3.12"
       - run: pip install scons
       - name: Compile
-        run: scons ${{ env.SCONS_FLAGS }} platform=linux arch=x86_64
+        run: scons ${{ env.SCONS_FLAGS }} precision=${{ matrix.precision }} platform=linux arch=x86_64
       - name: Stage the library
-        run: mkdir -p stage && cp bin/addons/godot_sandbox/bin/libgodot_riscv.linux.template_release.double.x86_64.so stage/ && ls -l stage
+        run: mkdir -p stage && cp bin/addons/godot_sandbox/bin/libgodot_riscv.linux.template_release${{ matrix.suffix }}.x86_64.so stage/ && ls -l stage
       - uses: actions/upload-artifact@v4
         with:
-          name: addon-linux-double
+          name: addon-linux-${{ matrix.precision }}
           path: stage/*
           if-no-files-found: error
 
   macos:
     runs-on: macos-26
     timeout-minutes: 120
+    strategy:
+      matrix:
+        include:
+          - precision: single
+            suffix: ""
+          - precision: double
+            suffix: .double
     steps:
       - uses: actions/checkout@v4
         with:
@@ -96,24 +115,81 @@ jobs:
           python-version: "3.12"
       - run: pip install scons
       - name: Compile
-        run: scons ${{ env.SCONS_FLAGS }} platform=macos arch=universal
+        run: scons ${{ env.SCONS_FLAGS }} precision=${{ matrix.precision }} platform=macos arch=universal
       # A release is flat, so the framework travels as its binary and its Info.plist.
       - name: Stage the library
         run: |
-          f=bin/addons/godot_sandbox/bin/libgodot_riscv.macos.template_release.double.universal.framework
+          name=libgodot_riscv.macos.template_release${{ matrix.suffix }}.universal
+          f=bin/addons/godot_sandbox/bin/$name.framework
           mkdir -p stage
-          cp "$f/libgodot_riscv.macos.template_release.double.universal" stage/
-          cp "$f/Resources/Info.plist" stage/libgodot_riscv.macos.template_release.double.universal.Info.plist
-          lipo stage/libgodot_riscv.macos.template_release.double.universal -verify_arch arm64 x86_64
+          cp "$f/$name" stage/
+          cp "$f/Resources/Info.plist" stage/$name.Info.plist
+          lipo stage/$name -verify_arch arm64 x86_64
           ls -l stage
       - uses: actions/upload-artifact@v4
         with:
-          name: addon-macos-double
+          name: addon-macos-${{ matrix.precision }}
+          path: stage/*
+          if-no-files-found: error
+
+  # A host refuses a guest whose .sandbox_variant names another Variant size, so each
+  # precision gets its own compiler, read back here before it ships.
+  gdscript-elf:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      matrix:
+        include:
+          - precision: single
+            elf: gdscript.elf
+            double_precision: "OFF"
+            variant_size: 24
+          - precision: double
+            elf: gdscript.double.elf
+            double_precision: "ON"
+            variant_size: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ env.ADDON_REPO }}
+          ref: ${{ env.ADDON_REF }}
+          submodules: recursive
+      - name: RISC-V cross-compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-14-riscv64-linux-gnu g++-14-riscv64-linux-gnu cmake
+      - name: Compile
+        env:
+          CC: riscv64-linux-gnu-gcc-14
+          CXX: riscv64-linux-gnu-g++-14
+        run: |
+          cmake -B build -S program/cpp/gdscript_compiler \
+            -DCMAKE_TOOLCHAIN_FILE=$PWD/tests/toolchain.cmake \
+            -DCMAKE_BUILD_TYPE=MinSizeRel -DSTRIPPED=ON \
+            -DDOUBLE_PRECISION=${{ matrix.double_precision }}
+          cmake --build build --parallel 4
+          mkdir -p stage && mv build/gdscript stage/${{ matrix.elf }}
+      - name: Check the Variant size it declares
+        run: |
+          riscv64-linux-gnu-objcopy -O binary --only-section=.sandbox_variant stage/${{ matrix.elf }} variant.bin
+          python3 - variant.bin ${{ matrix.variant_size }} <<'EOF'
+          import struct, sys
+          data = open(sys.argv[1], "rb").read()
+          if data[:4] != b"SBXV":
+              sys.exit(f"no .sandbox_variant marker: {data[:8]!r}")
+          size = struct.unpack("<I", data[4:8])[0]
+          print(f".sandbox_variant: {size}-byte Variant")
+          if size != int(sys.argv[2]):
+              sys.exit(f"expected a {sys.argv[2]}-byte Variant")
+          EOF
+      - uses: actions/upload-artifact@v4
+        with:
+          name: addon-gdscript-${{ matrix.precision }}
           path: stage/*
           if-no-files-found: error
 
   release:
-    needs: [windows, linux, macos]
+    needs: [windows, linux, macos, gdscript-elf]
     if: ${{ inputs.release_tag != '' || startsWith(github.ref, 'refs/tags/') }}
     runs-on: ubuntu-24.04
     steps:
@@ -131,5 +207,5 @@ jobs:
         run: |
           tag="${{ inputs.release_tag || github.ref_name }}"
           gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "$tag" \
-            --notes "godot-sandbox ${ADDON_REF} at precision=double: windows x86_64 (llvm-mingw ${LLVM_MINGW}), linux x86_64, macos universal; template_release. Flags: ${SCONS_FLAGS}" \
+            --notes "godot-sandbox ${ADDON_REF} at precision=single and precision=double: windows x86_64 (llvm-mingw ${LLVM_MINGW}), linux x86_64, macos universal; ${SCONS_FLAGS}. gdscript.elf declares a 24-byte Variant and gdscript.double.elf a 40-byte one." \
             release/* || gh release upload "$tag" --repo "$GITHUB_REPOSITORY" --clobber release/*
