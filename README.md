@@ -13,4 +13,4 @@ The escript parses the variant matrix, the pinned build tool and its settings fr
 
 ## Licence
 
-Apache-2.0 OR MIT, as the SPDX headers in the source state.
+MIT. See [LICENSE](LICENSE).
