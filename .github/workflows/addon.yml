@@ -1,5 +1,5 @@
 # The godot-sandbox addon at both precisions with BINTR_EMIT, for the rung's three hosts
-# (RFD 2293 step 1), and the SafeGDScript compiler built for each. Each library is the one
+# (RFD66606-2293 step 1), and the SafeGDScript compiler built for each. Each library is the one
 # the addon's .gdextension maps. A tag v<date>-addon.N publishes them as a release.
 name: addon
 
