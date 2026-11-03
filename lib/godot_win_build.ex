@@ -79,6 +79,18 @@ defmodule GodotWinBuild do
   end
 
 
+  # --precision replaces the variant's precision= and --extra appends flags; SCons takes the last
+  # value of a repeated key, so an extra flag overrides the workflow's.
+  def override(flags, opts) do
+    precision = if p = opts[:precision], do: ["precision=#{p}"], else: []
+    kept = if precision == [], do: flags, else: Enum.reject(flags, &String.starts_with?(&1, "precision="))
+    kept ++ precision ++ words(opts[:extra])
+  end
+
+  # SCons names a double build godot.<platform>.<target>.double.<arch>...
+  def bin_for(bin, target, "double"), do: String.replace(bin, ".#{target}.", ".#{target}.double.", global: false)
+  def bin_for(bin, _target, _precision), do: bin
+
   # osquery reports physical cores; SCons counts logical ones and takes all but one of them.
   def physical_cores do
     case System.cmd("osqueryi", ["--json", "select number_of_cores as c from cpu_info;"]) do

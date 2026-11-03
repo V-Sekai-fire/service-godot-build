@@ -5,7 +5,8 @@ defmodule GodotWinBuild.CLI do
   alias GodotWinBuild, as: W
 
   @switches [repo: :string, variant: :string, list: :boolean, dry_run: :boolean,
-             skip_sdk: :boolean, remove_editor: :boolean, mingw_prefix: :string, cache_path: :string, jobs: :integer]
+             skip_sdk: :boolean, remove_editor: :boolean, mingw_prefix: :string, cache_path: :string, jobs: :integer,
+             precision: :string, extra: :string]
 
   def main(argv) do
     {opts, _, _} = OptionParser.parse(argv, switches: @switches)

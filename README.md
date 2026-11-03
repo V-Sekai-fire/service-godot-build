@@ -11,6 +11,11 @@ The escript parses the variant matrix, the pinned build tool and its settings fr
     mix escript.build
     escript godot_win_build --repo <engine checkout> --list
 
+To replay double.yml's Windows job on a Windows desk when no runner is at hand:
+
+    escript godot_win_build --repo <engine checkout> --variant <cache-name> --precision double \
+      --extra "module_text_server_fb_enabled=yes optimize=speed d3d12=no angle=no accesskit=no"
+
 ## Licence
 
 MIT. See [LICENSE](LICENSE).
