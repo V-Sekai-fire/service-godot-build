@@ -11,6 +11,7 @@ defmodule GodotWinBuild.Runner do
          flags <- build_flags(repo, variant, sdk, opts),
          :ok <- guard_editor(repo, variant, opts),
          :ok <- compile(repo, variant, flags, dry) do
+      variant = %{variant | bin: W.bin_for(variant.bin, variant.target, opts[:precision])}
       artifact(repo, variant, dry)
       unit_tests(repo, variant, dry)
     end
@@ -46,7 +47,7 @@ defmodule GodotWinBuild.Runner do
   end
 
   defp build_flags(repo, variant, sdk, opts) do
-    base = W.resolve(repo, variant, sdk)
+    base = repo |> W.resolve(variant, sdk) |> W.override(opts)
     cache = ["cache_path=#{opts[:cache_path] || W.cache_path()}", "redirect_build_objects=no"]
     extra = if p = opts[:mingw_prefix], do: ["mingw_prefix=#{p}"], else: []
     jobs = if j = opts[:jobs] || W.interactive_jobs(), do: ["num_jobs=#{j}"], else: []
