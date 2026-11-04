@@ -22,7 +22,7 @@ on:
     tags: ["v*-double.*"]
 
 env:
-  ENGINE_REPO: https://github.com/V-Sekai-fire/entities-zone
+  ENGINE_REPO: V-Sekai-fire/entities-zone
   ENGINE_REF: ${{ inputs.engine_ref || '870268b512b713f28d8628ab63d9316cdaf55cfd' }}
   LLVM_MINGW: "20260922"
   # The flags every job shares. No dev_mode: these are the binaries the rung
