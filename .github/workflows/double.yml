@@ -12,12 +12,13 @@ on:
   workflow_dispatch:
     inputs:
       engine_ref:
-        description: entities-godot commit to build
-        default: 97dab7a638ae8b613dcf6e657f93f020471d9040
+        description: entities-zone commit to build
+        default: 870268b512b713f28d8628ab63d9316cdaf55cfd
         required: true
       release_tag:
-        description: publish a release under this tag (empty for artifacts only)
-        default: ""
+        description: publish a release under this tag
+        default: "v0.0.0-20261103235623-870268b512b7"
+        required: true
   push:
     tags: ["v0.0.0-*-*"]
 
