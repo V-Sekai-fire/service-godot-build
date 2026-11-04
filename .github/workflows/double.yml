@@ -33,9 +33,9 @@ env:
     module_text_server_fb_enabled=yes
     module_sqlite_enabled=no
     optimize=speed
-    d3d12=no
+    d3d12=yes
     angle=no
-    accesskit=no
+    accesskit=yes
 
 permissions:
   contents: write
