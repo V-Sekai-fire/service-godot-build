@@ -52,12 +52,12 @@ jobs:
         include:
           - target: editor
             cache-name: windows-editor-double
-            flags: debug_symbols=no module_sqlite_enabled=no
+            flags: debug_symbols=no
             bin: godot.windows.editor.double.x86_64.llvm.exe
           - target: template_release
             cache-name: windows-template-double
             # Symbols on, for the StringName fault RFD66606-2287 step 1 diagnoses.
-            flags: debug_symbols=yes separate_debug_symbols=yes module_sqlite_enabled=no
+            flags: debug_symbols=yes separate_debug_symbols=yes
             bin: godot.windows.template_release.double.x86_64.llvm.exe
     steps:
       - uses: actions/checkout@v4
