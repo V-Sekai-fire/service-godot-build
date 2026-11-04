@@ -35,7 +35,7 @@ env:
     optimize=speed
     d3d12=no
     angle=no
-    accesskit=yes
+    accesskit=no
 
 permissions:
   contents: write
