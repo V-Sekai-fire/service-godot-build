@@ -3,9 +3,14 @@
 # (the Fly ghost servers, headless) and macos arm64 (the desk, the desktop client
 # and the GPU sidecar). Editor and template_release each. Nothing is built by hand.
 #
-# A tag v<date>-double.N on this repository, or a dispatch with release_tag set,
-# publishes the six binaries and their sha256s as a release here; the pen's
-# CITATION.cff cites the tag.
+# A tag v0.0.0-YYYYMMDDhhmmss-<12-hex> on this repository publishes the six
+# binaries and their sha256s as a release here; the tag is the tagged commit's
+# Go pseudo-version, computed, never typed (RFD66606-2312):
+#   TZ=UTC git log -1 --format='v0.0.0-%cd-%h' \
+#     --date=format-local:%Y%m%d%H%M%S --abbrev=12
+# A stage, a rung name or a "1.0" goes in the release title and the stage
+# branch, not in the tag. Run `elixir scripts/check_release_tags.exs` to
+# recompute every tag. The pen's CITATION.cff cites the tag.
 name: double
 
 on:
@@ -16,10 +21,10 @@ on:
         default: 97dab7a638ae8b613dcf6e657f93f020471d9040
         required: true
       release_tag:
-        description: publish a release under this tag (empty for artifacts only)
+        description: publish a release under this pseudo-version tag (empty for artifacts only)
         default: ""
   push:
-    tags: ["v*-double.*"]
+    tags: ["v0.0.0-*"]
 
 env:
   ENGINE_REPO: V-Sekai-fire/entities-zone
