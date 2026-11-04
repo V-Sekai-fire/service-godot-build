@@ -30,6 +30,7 @@ env:
   SCONS_FLAGS: >-
     precision=double
     module_text_server_fb_enabled=yes
+    module_sqlite_enabled=no
     optimize=speed
     d3d12=no
     angle=no
