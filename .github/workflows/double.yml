@@ -1,4 +1,4 @@
-# The engine at precision=double, for the three hosts the rung runs on (RFD 2293):
+# The engine at precision=double, for the three hosts the rung runs on (RFD66606-2293):
 # windows x86_64 (the Steam Frame through its compatibility layer), linux x86_64
 # (the Fly ghost servers, headless) and macos arm64 (the desk, the desktop client
 # and the GPU sidecar). Editor and template_release each. Nothing is built by hand.
@@ -56,7 +56,7 @@ jobs:
             bin: godot.windows.editor.double.x86_64.llvm.exe
           - target: template_release
             cache-name: windows-template-double
-            # Symbols on, for the StringName fault RFD 2287 step 1 diagnoses.
+            # Symbols on, for the StringName fault RFD66606-2287 step 1 diagnoses.
             flags: debug_symbols=yes separate_debug_symbols=yes
             bin: godot.windows.template_release.double.x86_64.llvm.exe
     steps:
