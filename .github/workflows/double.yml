@@ -33,7 +33,7 @@ env:
     module_text_server_fb_enabled=yes
     module_sqlite_enabled=no
     optimize=speed
-    d3d12=yes
+    d3d12=no
     angle=no
     accesskit=yes
 
