@@ -19,7 +19,7 @@ on:
         description: publish a release under this tag (empty for artifacts only)
         default: ""
   push:
-    tags: ["v*-double.*"]
+    tags: ["v0.0.0-*-*"]
 
 env:
   ENGINE_REPO: V-Sekai-fire/entities-zone
