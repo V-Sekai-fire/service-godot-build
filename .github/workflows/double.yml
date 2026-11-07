@@ -3,9 +3,15 @@
 # (the Fly ghost servers, headless) and macos arm64 (the desk, the desktop client
 # and the GPU sidecar). Editor and template_release each. Nothing is built by hand.
 #
-# A tag v<date>-double.N on this repository, or a dispatch with release_tag set,
-# publishes the six binaries and their sha256s as a release here; the pen's
-# CITATION.cff cites the tag.
+# A release tag is the tagged commit's Go pseudo-version, computed, never typed
+# (RFD66606-2312): the tagged commit's UTC committer time as YYYYMMDDhhmmss,
+# then the first 12 hex digits of the commit, so it sorts by time in a file
+# listing and parses in every package tool:
+#   TZ=UTC git log -1 --format='v0.0.0-%cd-%h' \
+#     --date=format-local:%Y%m%d%H%M%S --abbrev=12
+# A stage, a rung name or a "1.0" goes in the release title and the stage branch,
+# not in the tag. Run `elixir scripts/check_release_tags.exs` to recompute every
+# tag; the pen's CITATION.cff cites the tag.
 name: double
 
 on:
@@ -16,7 +22,7 @@ on:
         default: 870268b512b713f28d8628ab63d9316cdaf55cfd
         required: true
       release_tag:
-        description: publish a release under this tag
+        description: the release tag, the tagged commit's Go pseudo-version (v0.0.0-YYYYMMDDhhmmss-<12-hex>, RFD66606-2312)
         default: "v0.0.0-20261103235623-870268b512b7"
         required: true
   push:
