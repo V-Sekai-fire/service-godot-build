@@ -19,11 +19,11 @@ on:
     inputs:
       engine_ref:
         description: entities-zone commit to build
-        default: c07557101539892d9f04764a2d023e24f5ad5756
+        default: 1ae0c072e9aa3aa9240d05ff51fd1dc07df1cbf3
         required: true
       release_tag:
         description: the release tag, the tagged commit's Go pseudo-version (v0.0.0-YYYYMMDDhhmmss-<12-hex>, RFD66606-2312)
-        default: "v0.0.0-20261111025605-c07557101539"
+        default: "v0.0.0-20261112160857-1ae0c072e9aa"
         required: true
   push:
     tags: ["v0.0.0-*-*"]
