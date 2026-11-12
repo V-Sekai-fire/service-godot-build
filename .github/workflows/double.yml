@@ -33,7 +33,9 @@ env:
   ENGINE_REF: ${{ inputs.engine_ref || '870268b512b713f28d8628ab63d9316cdaf55cfd' }}
   LLVM_MINGW: "20260922"
   # The flags every job shares. No dev_mode: these are the binaries the rung
-  # runs, not a lint of the engine.
+  # runs, not a lint of the engine. AccessKit is on, from the SDK the engine's
+  # install_accesskit.py fetches; a failed fetch fails the job. Debug symbols are
+  # on in every build, split beside the binary (RFD66606-2287 step 1).
   SCONS_FLAGS: >-
     precision=double
     module_text_server_fb_enabled=yes
@@ -41,7 +43,9 @@ env:
     optimize=speed
     d3d12=no
     angle=no
-    accesskit=no
+    accesskit=yes
+    debug_symbols=yes
+    separate_debug_symbols=yes
 
 permissions:
   contents: write
@@ -79,6 +83,21 @@ jobs:
           cache-name: ${{ matrix.cache-name }}
         continue-on-error: true
       - uses: ./.github/actions/godot-deps
+      - name: AccessKit SDK
+        # The engine only warns and drops AccessKit when the SDK is missing, so a
+        # failed fetch must fail here, and the path is passed explicitly.
+        shell: bash
+        run: |
+          python3 misc/scripts/install_accesskit.py || python misc/scripts/install_accesskit.py
+          for d in "bin/build_deps/accesskit" "${LOCALAPPDATA:-/nonexistent}/Godot/build_deps/accesskit"; do
+            if [ -d "$d/include" ]; then
+              if command -v cygpath > /dev/null; then sdk=$(cygpath -m "$d"); else sdk=$(cd "$d" && pwd); fi
+              echo "ACCESSKIT_SDK=$sdk" >> "$GITHUB_ENV"
+              exit 0
+            fi
+          done
+          echo "::error::AccessKit SDK not found after install"
+          exit 1
       - name: llvm-mingw, the compiler the headset build used
         shell: sh
         run: |
@@ -92,7 +111,7 @@ jobs:
         with:
           platform: windows
           target: ${{ matrix.target }}
-          scons-flags: ${{ env.SCONS_FLAGS }} ${{ matrix.flags }} arch=x86_64 use_mingw=yes use_llvm=yes mingw_prefix=${{ env.MINGW_PREFIX }}
+          scons-flags: ${{ env.SCONS_FLAGS }} accesskit_sdk_path=${{ env.ACCESSKIT_SDK }} arch=x86_64 use_mingw=yes use_llvm=yes mingw_prefix=${{ env.MINGW_PREFIX }}
       - name: Save the SCons cache
         uses: ./.github/actions/godot-cache-save
         with:
@@ -107,7 +126,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.cache-name }}
-          path: bin/*
+          path: bin/godot.*
           if-no-files-found: error
 
   linux:
@@ -131,6 +150,8 @@ jobs:
           repository: ${{ env.ENGINE_REPO }}
           ref: ${{ env.ENGINE_REF }}
           submodules: recursive
+      - name: Room for a debug-symbol build
+        run: sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /usr/local/share/boost && df -h .
       - name: wayland-scanner, the one library the engine cannot wrap
         run: |
           sudo apt-get update -q
@@ -141,12 +162,27 @@ jobs:
           cache-name: ${{ matrix.cache-name }}
         continue-on-error: true
       - uses: ./.github/actions/godot-deps
+      - name: AccessKit SDK
+        # The engine only warns and drops AccessKit when the SDK is missing, so a
+        # failed fetch must fail here, and the path is passed explicitly.
+        shell: bash
+        run: |
+          python3 misc/scripts/install_accesskit.py || python misc/scripts/install_accesskit.py
+          for d in "bin/build_deps/accesskit" "${LOCALAPPDATA:-/nonexistent}/Godot/build_deps/accesskit"; do
+            if [ -d "$d/include" ]; then
+              if command -v cygpath > /dev/null; then sdk=$(cygpath -m "$d"); else sdk=$(cd "$d" && pwd); fi
+              echo "ACCESSKIT_SDK=$sdk" >> "$GITHUB_ENV"
+              exit 0
+            fi
+          done
+          echo "::error::AccessKit SDK not found after install"
+          exit 1
       - name: Compile
         uses: ./.github/actions/godot-build
         with:
           platform: linuxbsd
           target: ${{ matrix.target }}
-          scons-flags: ${{ env.SCONS_FLAGS }} ${{ matrix.flags }} arch=x86_64
+          scons-flags: ${{ env.SCONS_FLAGS }} accesskit_sdk_path=${{ env.ACCESSKIT_SDK }} arch=x86_64
       - name: Save the SCons cache
         uses: ./.github/actions/godot-cache-save
         with:
@@ -160,7 +196,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.cache-name }}
-          path: bin/*
+          path: bin/godot.*
           if-no-files-found: error
 
   macos:
@@ -190,6 +226,21 @@ jobs:
           cache-name: ${{ matrix.cache-name }}
         continue-on-error: true
       - uses: ./.github/actions/godot-deps
+      - name: AccessKit SDK
+        # The engine only warns and drops AccessKit when the SDK is missing, so a
+        # failed fetch must fail here, and the path is passed explicitly.
+        shell: bash
+        run: |
+          python3 misc/scripts/install_accesskit.py || python misc/scripts/install_accesskit.py
+          for d in "bin/build_deps/accesskit" "${LOCALAPPDATA:-/nonexistent}/Godot/build_deps/accesskit"; do
+            if [ -d "$d/include" ]; then
+              if command -v cygpath > /dev/null; then sdk=$(cygpath -m "$d"); else sdk=$(cd "$d" && pwd); fi
+              echo "ACCESSKIT_SDK=$sdk" >> "$GITHUB_ENV"
+              exit 0
+            fi
+          done
+          echo "::error::AccessKit SDK not found after install"
+          exit 1
       - name: Vulkan SDK (MoltenVK), beside Metal
         id: vulkan-sdk
         run: |
@@ -205,7 +256,7 @@ jobs:
         with:
           platform: macos
           target: ${{ matrix.target }}
-          scons-flags: ${{ env.SCONS_FLAGS }} ${{ matrix.flags }} arch=arm64 vulkan=${{ steps.vulkan-sdk.outputs.VULKAN_ENABLED }}
+          scons-flags: ${{ env.SCONS_FLAGS }} accesskit_sdk_path=${{ env.ACCESSKIT_SDK }} arch=arm64 vulkan=${{ steps.vulkan-sdk.outputs.VULKAN_ENABLED }}
       - name: Save the SCons cache
         uses: ./.github/actions/godot-cache-save
         with:
@@ -216,10 +267,15 @@ jobs:
           ls -l bin/
           test -f "bin/${{ matrix.bin }}"
           if [ "${{ matrix.target }}" = editor ]; then ./bin/${{ matrix.bin }} --headless --version; fi
+      - name: Zip the dSYM, so the release flatten keeps it whole
+        run: |
+          cd bin
+          for d in godot.*.dSYM; do [ -d "$d" ] || continue; ditto -c -k --keepParent "$d" "$d.zip"; rm -rf "$d"; done
+          ls -l
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.cache-name }}
-          path: bin/*
+          path: bin/godot.*
           if-no-files-found: error
 
   release:
