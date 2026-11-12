@@ -92,7 +92,7 @@ jobs:
           python3 misc/scripts/install_accesskit.py || python misc/scripts/install_accesskit.py
           for d in "bin/build_deps/accesskit" "${LOCALAPPDATA:-/nonexistent}/Godot/build_deps/accesskit"; do
             if [ -d "$d/include" ]; then
-              if command -v cygpath > /dev/null; then sdk=$(cygpath -m "$d"); else sdk=$(cd "$d" && pwd); fi
+              if command -v cygpath > /dev/null; then sdk=$(cygpath -am "$d"); else sdk=$(cd "$d" && pwd); fi
               echo "ACCESSKIT_SDK=$sdk" >> "$GITHUB_ENV"
               exit 0
             fi
@@ -131,11 +131,10 @@ jobs:
           command -v zstd
           cd bin
           shopt -s nullglob
-          syms=(godot.*.debugsymbols godot.*.pdb)
-          dsyms=(godot.*.dSYM)
-          if [ ${#syms[@]} -eq 0 ] && [ ${#dsyms[@]} -eq 0 ]; then echo "::error::no debug symbols were built"; exit 1; fi
-          for f in "${syms[@]}"; do zstd -T0 -19 --long=27 --rm -q "$f"; done
-          for d in "${dsyms[@]}"; do tar -cf - "$d" | zstd -T0 -19 --long=27 -q -o "$d.tar.zst"; rm -rf "$d"; done
+          n=0
+          for f in godot.*.debugsymbols godot.*.pdb; do zstd -T0 -19 --long=27 --rm -q "$f"; n=$((n+1)); done
+          for d in godot.*.dSYM; do tar -cf - "$d" | zstd -T0 -19 --long=27 -q -o "$d.tar.zst"; rm -rf "$d"; n=$((n+1)); done
+          if [ "$n" -eq 0 ]; then echo "::error::no debug symbols were built"; exit 1; fi
           ls -l
           big=$(find . -maxdepth 1 -type f -size +2040M)
           if [ -n "$big" ]; then echo "::error::over the 2 GiB release-asset limit: $big"; exit 1; fi
@@ -187,7 +186,7 @@ jobs:
           python3 misc/scripts/install_accesskit.py || python misc/scripts/install_accesskit.py
           for d in "bin/build_deps/accesskit" "${LOCALAPPDATA:-/nonexistent}/Godot/build_deps/accesskit"; do
             if [ -d "$d/include" ]; then
-              if command -v cygpath > /dev/null; then sdk=$(cygpath -m "$d"); else sdk=$(cd "$d" && pwd); fi
+              if command -v cygpath > /dev/null; then sdk=$(cygpath -am "$d"); else sdk=$(cd "$d" && pwd); fi
               echo "ACCESSKIT_SDK=$sdk" >> "$GITHUB_ENV"
               exit 0
             fi
@@ -217,11 +216,10 @@ jobs:
           command -v zstd
           cd bin
           shopt -s nullglob
-          syms=(godot.*.debugsymbols godot.*.pdb)
-          dsyms=(godot.*.dSYM)
-          if [ ${#syms[@]} -eq 0 ] && [ ${#dsyms[@]} -eq 0 ]; then echo "::error::no debug symbols were built"; exit 1; fi
-          for f in "${syms[@]}"; do zstd -T0 -19 --long=27 --rm -q "$f"; done
-          for d in "${dsyms[@]}"; do tar -cf - "$d" | zstd -T0 -19 --long=27 -q -o "$d.tar.zst"; rm -rf "$d"; done
+          n=0
+          for f in godot.*.debugsymbols godot.*.pdb; do zstd -T0 -19 --long=27 --rm -q "$f"; n=$((n+1)); done
+          for d in godot.*.dSYM; do tar -cf - "$d" | zstd -T0 -19 --long=27 -q -o "$d.tar.zst"; rm -rf "$d"; n=$((n+1)); done
+          if [ "$n" -eq 0 ]; then echo "::error::no debug symbols were built"; exit 1; fi
           ls -l
           big=$(find . -maxdepth 1 -type f -size +2040M)
           if [ -n "$big" ]; then echo "::error::over the 2 GiB release-asset limit: $big"; exit 1; fi
@@ -267,7 +265,7 @@ jobs:
           python3 misc/scripts/install_accesskit.py || python misc/scripts/install_accesskit.py
           for d in "bin/build_deps/accesskit" "${LOCALAPPDATA:-/nonexistent}/Godot/build_deps/accesskit"; do
             if [ -d "$d/include" ]; then
-              if command -v cygpath > /dev/null; then sdk=$(cygpath -m "$d"); else sdk=$(cd "$d" && pwd); fi
+              if command -v cygpath > /dev/null; then sdk=$(cygpath -am "$d"); else sdk=$(cd "$d" && pwd); fi
               echo "ACCESSKIT_SDK=$sdk" >> "$GITHUB_ENV"
               exit 0
             fi
@@ -307,11 +305,10 @@ jobs:
           command -v zstd
           cd bin
           shopt -s nullglob
-          syms=(godot.*.debugsymbols godot.*.pdb)
-          dsyms=(godot.*.dSYM)
-          if [ ${#syms[@]} -eq 0 ] && [ ${#dsyms[@]} -eq 0 ]; then echo "::error::no debug symbols were built"; exit 1; fi
-          for f in "${syms[@]}"; do zstd -T0 -19 --long=27 --rm -q "$f"; done
-          for d in "${dsyms[@]}"; do tar -cf - "$d" | zstd -T0 -19 --long=27 -q -o "$d.tar.zst"; rm -rf "$d"; done
+          n=0
+          for f in godot.*.debugsymbols godot.*.pdb; do zstd -T0 -19 --long=27 --rm -q "$f"; n=$((n+1)); done
+          for d in godot.*.dSYM; do tar -cf - "$d" | zstd -T0 -19 --long=27 -q -o "$d.tar.zst"; rm -rf "$d"; n=$((n+1)); done
+          if [ "$n" -eq 0 ]; then echo "::error::no debug symbols were built"; exit 1; fi
           ls -l
           big=$(find . -maxdepth 1 -type f -size +2040M)
           if [ -n "$big" ]; then echo "::error::over the 2 GiB release-asset limit: $big"; exit 1; fi
