@@ -40,7 +40,6 @@ env:
   SCONS_FLAGS: >-
     precision=double
     module_text_server_fb_enabled=yes
-    module_sqlite_enabled=no
     optimize=speed
     d3d12=no
     angle=no
@@ -78,6 +77,18 @@ jobs:
           repository: ${{ env.ENGINE_REPO }}
           ref: ${{ env.ENGINE_REF }}
           submodules: recursive
+      - name: Build tools from pixi (glslc everywhere, wayland-scanner on Linux)
+        uses: prefix-dev/setup-pixi@v0.11.3
+        with:
+          manifest-path: .github/double/pixi.toml
+          locked: true
+          cache: true
+          activate-environment: true
+      - name: FoundationDB client
+        id: fdb-client
+        # modules/sqlite links it; a ref without that module skips the download.
+        if: hashFiles('modules/sqlite/config.py') != ''
+        uses: V-Sekai-fire/datasource-foundationdb/.github/actions/fdb-client@d57b8f5e60e30afbc3edce8bb29684b8b808b244
       - name: Restore the SCons cache
         uses: ./.github/actions/godot-cache-restore
         with:
@@ -126,7 +137,7 @@ jobs:
         with:
           platform: windows
           target: ${{ matrix.target }}
-          scons-flags: ${{ env.SCONS_FLAGS }} accesskit_sdk_path=${{ env.ACCESSKIT_SDK }} arch=x86_64 use_mingw=yes use_llvm=yes mingw_prefix=${{ env.MINGW_PREFIX }}
+          scons-flags: ${{ env.SCONS_FLAGS }} ${{ steps.fdb-client.outputs.scons-flags }} accesskit_sdk_path=${{ env.ACCESSKIT_SDK }} arch=x86_64 use_mingw=yes use_llvm=yes mingw_prefix=${{ env.MINGW_PREFIX }}
       - name: Save the SCons cache
         uses: ./.github/actions/godot-cache-save
         with:
@@ -143,6 +154,16 @@ jobs:
             if [ -f "$f" ]; then n=$((n+1)); echo "$f"; fi
           done
           if [ "$n" -eq 0 ]; then echo "::error::the engine built without AccessKit: no driver object in drivers/accesskit"; exit 1; fi
+      - name: The FoundationDB client ships beside the binary
+        if: steps.fdb-client.outputs.scons-flags != ''
+        shell: bash
+        run: |
+          set -eu
+          lib="$(echo "${{ steps.fdb-client.outputs.scons-flags }}" | sed 's/.*fdb_libpath=//')"
+          case "$RUNNER_OS" in
+            Linux) cp "$lib/libfdb_c.so" bin/ ;;
+            Windows) cp "$(dirname "$lib")/../bin/fdb_c.dll" bin/ ;;
+          esac
       - name: The binary runs
         shell: sh
         run: |
@@ -165,7 +186,12 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.cache-name }}
-          path: bin/godot.*
+          path: |
+            bin/*
+            !bin/obj
+            !bin/obj/**
+            !bin/build_deps
+            !bin/build_deps/**
           compression-level: 0
           if-no-files-found: error
 
@@ -190,12 +216,20 @@ jobs:
           repository: ${{ env.ENGINE_REPO }}
           ref: ${{ env.ENGINE_REF }}
           submodules: recursive
+      - name: Build tools from pixi (glslc everywhere, wayland-scanner on Linux)
+        uses: prefix-dev/setup-pixi@v0.11.3
+        with:
+          manifest-path: .github/double/pixi.toml
+          locked: true
+          cache: true
+          activate-environment: true
+      - name: FoundationDB client
+        id: fdb-client
+        # modules/sqlite links it; a ref without that module skips the download.
+        if: hashFiles('modules/sqlite/config.py') != ''
+        uses: V-Sekai-fire/datasource-foundationdb/.github/actions/fdb-client@d57b8f5e60e30afbc3edce8bb29684b8b808b244
       - name: Room for a debug-symbol build
         run: sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /usr/local/share/boost && df -h .
-      - name: wayland-scanner, the one library the engine cannot wrap
-        run: |
-          sudo apt-get update -q
-          sudo apt-get install -y -q libwayland-bin
       - name: Restore the SCons cache
         uses: ./.github/actions/godot-cache-restore
         with:
@@ -236,7 +270,7 @@ jobs:
         with:
           platform: linuxbsd
           target: ${{ matrix.target }}
-          scons-flags: ${{ env.SCONS_FLAGS }} accesskit_sdk_path=${{ env.ACCESSKIT_SDK }} arch=x86_64
+          scons-flags: ${{ env.SCONS_FLAGS }} ${{ steps.fdb-client.outputs.scons-flags }} accesskit_sdk_path=${{ env.ACCESSKIT_SDK }} arch=x86_64
       - name: Save the SCons cache
         uses: ./.github/actions/godot-cache-save
         with:
@@ -253,6 +287,16 @@ jobs:
             if [ -f "$f" ]; then n=$((n+1)); echo "$f"; fi
           done
           if [ "$n" -eq 0 ]; then echo "::error::the engine built without AccessKit: no driver object in drivers/accesskit"; exit 1; fi
+      - name: The FoundationDB client ships beside the binary
+        if: steps.fdb-client.outputs.scons-flags != ''
+        shell: bash
+        run: |
+          set -eu
+          lib="$(echo "${{ steps.fdb-client.outputs.scons-flags }}" | sed 's/.*fdb_libpath=//')"
+          case "$RUNNER_OS" in
+            Linux) cp "$lib/libfdb_c.so" bin/ ;;
+            Windows) cp "$(dirname "$lib")/../bin/fdb_c.dll" bin/ ;;
+          esac
       - name: The binary runs headless
         run: |
           ls -l bin/
@@ -274,7 +318,12 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.cache-name }}
-          path: bin/godot.*
+          path: |
+            bin/*
+            !bin/obj
+            !bin/obj/**
+            !bin/build_deps
+            !bin/build_deps/**
           compression-level: 0
           if-no-files-found: error
 
@@ -299,6 +348,18 @@ jobs:
           repository: ${{ env.ENGINE_REPO }}
           ref: ${{ env.ENGINE_REF }}
           submodules: recursive
+      - name: Build tools from pixi (glslc everywhere, wayland-scanner on Linux)
+        uses: prefix-dev/setup-pixi@v0.11.3
+        with:
+          manifest-path: .github/double/pixi.toml
+          locked: true
+          cache: true
+          activate-environment: true
+      - name: FoundationDB client
+        id: fdb-client
+        # modules/sqlite links it; a ref without that module skips the download.
+        if: hashFiles('modules/sqlite/config.py') != ''
+        uses: V-Sekai-fire/datasource-foundationdb/.github/actions/fdb-client@d57b8f5e60e30afbc3edce8bb29684b8b808b244
       - name: Restore the SCons cache
         uses: ./.github/actions/godot-cache-restore
         with:
@@ -349,7 +410,7 @@ jobs:
         with:
           platform: macos
           target: ${{ matrix.target }}
-          scons-flags: ${{ env.SCONS_FLAGS }} accesskit_sdk_path=${{ env.ACCESSKIT_SDK }} arch=arm64 vulkan=${{ steps.vulkan-sdk.outputs.VULKAN_ENABLED }}
+          scons-flags: ${{ env.SCONS_FLAGS }} ${{ steps.fdb-client.outputs.scons-flags }} accesskit_sdk_path=${{ env.ACCESSKIT_SDK }} arch=arm64 vulkan=${{ steps.vulkan-sdk.outputs.VULKAN_ENABLED }}
       - name: Save the SCons cache
         uses: ./.github/actions/godot-cache-save
         with:
@@ -387,21 +448,47 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.cache-name }}
-          path: bin/godot.*
+          path: |
+            bin/*
+            !bin/obj
+            !bin/obj/**
+            !bin/build_deps
+            !bin/build_deps/**
           compression-level: 0
           if-no-files-found: error
 
   release:
     needs: [windows, linux, macos]
     runs-on: ubuntu-24.04
+    env:
+      # The release the fdb-client action downloads the client from; the server comes from the same one.
+      FDB_RELEASE: 7.3.79-weftspun-dev.2
     steps:
       - uses: actions/download-artifact@v4
         with:
           path: out
+      - name: The matching FoundationDB server
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          mkdir -p release fdb
+          cd fdb
+          gh release download "$FDB_RELEASE" -R V-Sekai-fire/datasource-foundationdb -p SHA256SUMS \
+            -p fdbserver.linux.x86_64 -p fdbserver.macos.arm64 -p fdbserver.windows.x86_64.exe
+          grep -E ' \*?fdbserver\.' SHA256SUMS > wanted.sums
+          [ "$(wc -l < wanted.sums)" = 3 ] || { echo "SHA256SUMS lacks a fdbserver"; cat SHA256SUMS; exit 1; }
+          sha256sum -c wanted.sums
+          mv fdbserver.* ../release/
       - name: One directory, one sha256 line per binary
         run: |
           mkdir -p release
-          find out -type f -exec mv -t release/ {} +
+          # The editor and template uploads of a platform ship the same FoundationDB client; keep one copy, fail on any other clash.
+          find out -type f -not -path '*/obj/*' -not -path '*/build_deps/*' | sort | while read -r f; do
+            b=$(basename "$f")
+            if [ -e "release/$b" ]; then cmp -s "$f" "release/$b" || { echo "different files named $b"; exit 1; }
+            else mv "$f" release/; fi
+          done
           cd release && sha256sum * | tee SHA256SUMS
       - name: Publish
         env:
@@ -409,5 +496,5 @@ jobs:
         run: |
           tag="${{ inputs.release_tag || github.ref_name }}"
           gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "$tag" \
-            --notes "entities-zone ${ENGINE_REF} at precision=double: windows x86_64 (llvm-mingw ${LLVM_MINGW}), linux x86_64, macos arm64; editor and template_release. Flags: ${SCONS_FLAGS}. Debug symbols are zstd: zstd -d for .zst, tar --zstd -xf for .dSYM.tar.zst." \
+            --notes "entities-zone ${ENGINE_REF} at precision=double: windows x86_64 (llvm-mingw ${LLVM_MINGW}), linux x86_64, macos arm64; editor and template_release. Flags: ${SCONS_FLAGS}. FoundationDB client and fdbserver from datasource-foundationdb ${FDB_RELEASE}. Debug symbols are zstd: zstd -d for .zst, tar --zstd -xf for .dSYM.tar.zst." \
             release/* || gh release upload "$tag" --repo "$GITHUB_REPOSITORY" --clobber release/*
